@@ -1,68 +1,59 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
+import '@mapbox/mapbox-gl-directions/dist/mapbox-gl-directions.css';
+import MapboxDirections from '@mapbox/mapbox-gl-directions/dist/mapbox-gl-directions';
 
 const Map = () => {
-  const [map, setMap] = useState(null);
-  const mapContainerRef = useRef(null); // Define mapContainerRef
+  const mapContainerRef = useRef(null);
+  const directionsRef = useRef(null);
+  const defaultOrigin = [77.56118630987763, 12.922163163006687];
+  const defaultDestination = [77.5142212037549, 12.825204708926208];
 
   useEffect(() => {
     mapboxgl.accessToken = 'pk.eyJ1IjoiYXJzaHNpbmdoMzAiLCJhIjoiY2x0eWVyY2JqMGVndjJqczd0OGRjbjRmcCJ9.IBXwX0txDivKOIkvKGE3hg';
-    
-    const initializeMap = ({ setMap, mapContainer }) => {
-      const mapInstance = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v11',
-        center: [77.5946, 12.9716], // Center on Bangalore
-        zoom: 12, // Zoom level for Bangalore
-      });
 
-      mapInstance.on('load', () => {
-        setMap(mapInstance);
-        displayDirections(mapInstance);
-      });
-    };
-
-    if (!map) initializeMap({ setMap, mapContainer: mapContainerRef });
-  }, [map]);
-
-  const displayDirections = (mapInstance) => {
-    // Example coordinates (Bangalore and Mumbai)
-    const origin = [77.5946, 12.9716];
-    const destination = [72.8777, 19.0760];
-
-    // Add the directions layer
-    mapInstance.addLayer({
-      id: 'route',
-      type: 'line',
-      source: {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: [origin, destination],
-          },
-        },
-      },
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-      },
-      paint: {
-        'line-color': '#888',
-        'line-width': 8,
-      },
+    const mapInstance = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: 'mapbox://styles/mapbox/streets-v11',
+      center: defaultOrigin, // Set default origin as map center
+      zoom: 12,
     });
 
-    // Fit map to the route
-    const bounds = new mapboxgl.LngLatBounds();
-    bounds.extend(origin);
-    bounds.extend(destination);
-    mapInstance.fitBounds(bounds, { padding: 100 });
+    mapInstance.on('load', () => {
+      initializeDirectionsControl(mapInstance);
+      startRoute(); // Start route automatically when map loads
+    });
+  }, []);
+
+  const initializeDirectionsControl = (mapInstance) => {
+    const directions = new MapboxDirections({
+      accessToken: mapboxgl.accessToken,
+      unit: 'metric',
+      profile: 'mapbox/driving',
+      controls: { instructions: true, profileSwitcher: true },
+    });
+
+    mapInstance.addControl(directions, 'top-left');
+    directionsRef.current = directions;
+
+    // Set the origin and destination
+    directionsRef.current.setOrigin(defaultOrigin);
+    directionsRef.current.setDestination(defaultDestination);
   };
 
-  return <div ref={mapContainerRef} style={{ width: '100%', height: '600px' }} />;
+  const startRoute = () => {
+    if (directionsRef.current) {
+      // Manually set origin and destination to trigger route calculation
+      directionsRef.current.setOrigin(defaultOrigin);
+      directionsRef.current.setDestination(defaultDestination);
+    }
+  };
+
+  return (
+    <div>
+      <div ref={mapContainerRef} style={{ width: '100%', height: '600px' }} />
+    </div>
+  );
 };
 
 export default Map;
